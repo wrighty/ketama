@@ -28,11 +28,13 @@ func (a BySize) Less(i, j int) bool { return a[i] < a[j] }
 func (c *Continuim) GetHost(key string) string {
 	point := c.hash(key)
 
-	//return c.findNearestHost(point)
-	return c.findNearestHostBisect(point)
+	//nearest := c.findNearestPoint(point)
+	nearest := c.findNearestPointBisect(point)
+	h := c.pointsMap[nearest]
+	return h.name
 }
 
-func (c *Continuim) findNearestHost(point uint32) string {
+func (c *Continuim) findNearestPoint(point uint32) uint32 {
 	//this is hideous linear walk through the array to find the first biggest point
 	var firstBiggest uint32
 	for _, p := range c.points {
@@ -46,11 +48,10 @@ func (c *Continuim) findNearestHost(point uint32) string {
 	if firstBiggest == 0 {
 		firstBiggest = c.points[0]
 	}
-	h := c.pointsMap[firstBiggest]
-	return h.name
+	return firstBiggest
 }
 
-func (c *Continuim) findNearestHostBisect(point uint32) string {
+func (c *Continuim) findNearestPointBisect(point uint32) uint32 {
 	//this is a hideous binary search through the array to find the first biggest point
 	jump := len(c.points) / 2
 	var firstBiggest uint32
@@ -72,7 +73,7 @@ func (c *Continuim) findNearestHostBisect(point uint32) string {
 		}
 		if cmp == point {
 			if curPos < (len(c.points) - 1) {
-				firstBiggest = cmp
+				firstBiggest = c.points[curPos+1]
 				break
 			}
 			firstBiggest = c.points[0]
@@ -91,7 +92,7 @@ func (c *Continuim) findNearestHostBisect(point uint32) string {
 			break
 		}
 	}
-	return c.pointsMap[firstBiggest].name
+	return firstBiggest
 }
 
 //Make instantiates a Continuim with a set of hosts of equal weights

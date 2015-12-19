@@ -1,9 +1,6 @@
 package ketama
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 func TestSetHost(t *testing.T) {
 
@@ -11,12 +8,10 @@ func TestSetHost(t *testing.T) {
 
 	c := Make(hosts)
 	h1 := c.GetHost("Hello World!")
-	fmt.Println(h1)
 	if h1 != "host1" {
 		t.Fail()
 	}
 	h2 := c.GetHost("Hello World")
-	fmt.Println(h2)
 	if h2 != "host2" {
 		t.Fail()
 	}
@@ -33,7 +28,6 @@ func TestSetHostWithWeights(t *testing.T) {
 	if h1 != "host1" {
 		t.Fail()
 	}
-	fmt.Println(h1)
 }
 
 func TestFindMethodsMatch(t *testing.T) {
@@ -41,13 +35,37 @@ func TestFindMethodsMatch(t *testing.T) {
 
 	for _, key := range benchmarkKeys {
 		point := c.hash(key)
-		a := c.findNearestHost(point)
-		b := c.findNearestHostBisect(point)
-		if a != b {
-			t.Log("mismatch of points", a, b)
+		p1 := c.findNearestPoint(point)
+		p2 := c.findNearestPointBisect(point)
+		if p1 != p2 {
+			t.Log("points mismatch: array walking says", p1, "bisect says", p2, "when looking up", point)
 			t.Fail()
 		}
 	}
+}
+
+func TestEdgeCases(t *testing.T) {
+	c := MakeWithWeights(benchmarkHosts)
+	points := []uint32{
+		0,
+		4294967295,
+		c.points[0],
+		c.points[len(c.points)-1],
+		c.points[len(c.points)-2],
+		c.points[len(c.points)/2],
+	}
+
+	for _, point := range points {
+		p1 := c.findNearestPoint(point)
+		p2 := c.findNearestPointBisect(point)
+		if p1 != p2 {
+			t.Log("points mismatch: array walking says", p1, "bisect says", p2, "when looking up", point)
+			t.Fail()
+
+		}
+
+	}
+
 }
 
 var benchmarkKeys = []string{
@@ -57,6 +75,13 @@ var benchmarkKeys = []string{
 	"test",
 	"of",
 	"searches",
+	"that",
+	"we",
+	"try",
+	"to",
+	"find",
+	"bugs",
+	"with",
 }
 
 var benchmarkHosts = map[string]uint{
@@ -83,20 +108,26 @@ var benchmarkHosts = map[string]uint{
 
 func BenchmarkBisect(b *testing.B) {
 	c := MakeWithWeights(benchmarkHosts)
+	var benchmarkPoints []uint32
+	for _, k := range benchmarkKeys {
+		benchmarkPoints = append(benchmarkPoints, c.hash(k))
+	}
 	for i := 0; i < b.N; i++ {
-		for _, key := range benchmarkKeys {
-			point := c.hash(key)
-			c.findNearestHostBisect(point)
+		for _, point := range benchmarkPoints {
+			c.findNearestPointBisect(point)
 		}
 	}
 }
 
 func BenchmarkWalk(b *testing.B) {
 	c := MakeWithWeights(benchmarkHosts)
+	var benchmarkPoints []uint32
+	for _, k := range benchmarkKeys {
+		benchmarkPoints = append(benchmarkPoints, c.hash(k))
+	}
 	for i := 0; i < b.N; i++ {
-		for _, key := range benchmarkKeys {
-			point := c.hash(key)
-			c.findNearestHost(point)
+		for _, point := range benchmarkPoints {
+			c.findNearestPoint(point)
 		}
 	}
 }
