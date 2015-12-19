@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-//Continum models a sparse space that a given host occupies one or more points along
+//Continuim models a sparse space that a given host occupies one or more points along
 type Continuim struct {
 	pointsMap map[uint32]*host
 	points    []uint32
@@ -148,7 +148,7 @@ func (c *Continuim) setHostsWithWeights(hostnames map[string]uint) {
 		}
 	}
 	//use the points in the map to construct a sorted array to search later in GetHost
-	for point, _ := range c.pointsMap {
+	for point := range c.pointsMap {
 		c.points = append(c.points, point)
 		sort.Sort(BySize(c.points))
 	}
