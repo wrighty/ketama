@@ -1,6 +1,12 @@
 package ketama
 
-import "testing"
+import (
+	"bytes"
+	"crypto/md5"
+	"fmt"
+	"strconv"
+	"testing"
+)
 
 func TestSetHost(t *testing.T) {
 
@@ -78,6 +84,49 @@ func TestEdgeCases(t *testing.T) {
 		}
 	}
 
+}
+
+//TestCompatibilityWithLibketama recreates the test baked into libketama to ensure this package is compatible
+//with other implementations
+//It is a port of https://github.com/RJ/ketama/blob/master/libketama/ketama_test.c
+func TestCompatibilityWithLibketama(t *testing.T) {
+	var output bytes.Buffer
+
+	//magic value comes from
+	//https://github.com/RJ/ketama/blob/18cf9a7717dad0d8106a5205900a17617043fe2c/libketama/test.sh#L8
+	expected := "5672b131391f5aa2b280936aec1eea74"
+
+	ketamaHosts := map[string]uint{
+		"10.0.1.1:11211": 600,
+		"10.0.1.2:11211": 300,
+		"10.0.1.3:11211": 200,
+		"10.0.1.4:11211": 350,
+		"10.0.1.5:11211": 1000,
+		"10.0.1.6:11211": 800,
+		"10.0.1.7:11211": 950,
+		"10.0.1.8:11211": 100,
+	}
+	c := MakeWithWeights(ketamaHosts)
+
+	output.WriteString("\n") //mirrors an empty string from libketama's ketama_error()
+
+	var host, k string
+	var p, nearest uint32
+
+	for i := 0; i < 1000000; i++ {
+		k = strconv.Itoa(i)
+		p = c.hash(k)
+		nearest = c.findNearestPointBisect(p)
+		host = c.pointsMap[nearest].name
+		output.WriteString(fmt.Sprintf("%d %d %s\n", p, nearest, host))
+	}
+	hash := md5.Sum(output.Bytes())
+	actual := fmt.Sprintf("%x", hash)
+
+	if actual != expected {
+		t.Log("this package is no longer compatible with the original libketama")
+		t.Fail()
+	}
 }
 
 var benchmarkKeys = []string{
