@@ -6,16 +6,22 @@ func TestSetHost(t *testing.T) {
 
 	hosts := []string{"host1", "host2"}
 
-	c := Make(hosts)
-	h1 := c.GetHost("Hello World!")
-	if h1 != "host1" {
-		t.Fail()
-	}
-	h2 := c.GetHost("Hello World")
-	if h2 != "host2" {
-		t.Fail()
+	tests := []struct {
+		k        string
+		expected string
+	}{
+		{"Hello World!", "host1"},
+		{"Hello World", "host2"},
 	}
 
+	c := Make(hosts)
+	for _, test := range tests {
+		actual := c.GetHost(test.k)
+		if actual != test.expected {
+			t.Log("failed testing", test.k, "expected", test.expected, "got", actual)
+			t.Fail()
+		}
+	}
 }
 
 func TestSetHostWithWeights(t *testing.T) {
@@ -46,24 +52,30 @@ func TestFindMethodsMatch(t *testing.T) {
 
 func TestEdgeCases(t *testing.T) {
 	c := MakeWithWeights(benchmarkHosts)
-	points := []uint32{
-		0,
-		4294967295,
-		c.points[0],
-		c.points[len(c.points)-1],
-		c.points[len(c.points)-2],
-		c.points[len(c.points)/2],
+	tests := []struct {
+		p        uint32
+		expected uint32
+	}{
+		{0, c.points[0]},
+		{4294967295, c.points[0]},
+		{c.points[0], c.points[1]},
+		{c.points[len(c.points)-1], c.points[0]},
+		{c.points[len(c.points)-2], c.points[len(c.points)-1]},
+		{c.points[len(c.points)/2], c.points[(len(c.points)/2)+1]},
 	}
 
-	for _, point := range points {
-		p1 := c.findNearestPoint(point)
-		p2 := c.findNearestPointBisect(point)
+	for _, test := range tests {
+		p1 := c.findNearestPoint(test.p)
+		p2 := c.findNearestPointBisect(test.p)
 		if p1 != p2 {
-			t.Log("points mismatch: array walking says", p1, "bisect says", p2, "when looking up", point)
+			t.Log("points mismatch: array walking says", p1, "bisect says", p2, "when looking up", test.p)
 			t.Fail()
 
 		}
-
+		if p1 != test.expected {
+			t.Log("did not find expected point, got", p1, "expected", test.expected)
+			t.Fail()
+		}
 	}
 
 }
