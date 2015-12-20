@@ -7,8 +7,8 @@ import (
 	"strconv"
 )
 
-//Continuim models a sparse space that a given host occupies one or more points along
-type Continuim struct {
+//Continuum models a sparse space that a given host occupies one or more points along
+type Continuum struct {
 	pointsMap map[uint32]*host
 	points    []uint32
 }
@@ -24,8 +24,8 @@ func (a BySize) Len() int           { return len(a) }
 func (a BySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a BySize) Less(i, j int) bool { return a[i] < a[j] }
 
-//GetHost looks up the host that is next nearest on the Continuim to where key hashes to and returns the name
-func (c *Continuim) GetHost(key string) string {
+//GetHost looks up the host that is next nearest on the Continuum to where key hashes to and returns the name
+func (c *Continuum) GetHost(key string) string {
 	point := c.hash(key)
 
 	//nearest := c.findNearestPoint(point)
@@ -34,7 +34,7 @@ func (c *Continuim) GetHost(key string) string {
 	return h.name
 }
 
-func (c *Continuim) findNearestPoint(point uint32) uint32 {
+func (c *Continuum) findNearestPoint(point uint32) uint32 {
 	//this is hideous linear walk through the array to find the first biggest point
 	var firstBiggest uint32
 	for _, p := range c.points {
@@ -43,7 +43,7 @@ func (c *Continuim) findNearestPoint(point uint32) uint32 {
 			break
 		}
 	}
-	//check for point that is outside Continuim
+	//check for point that is outside Continuum
 	//we tried every point and found nothing bigger, therefore wrap
 	if firstBiggest == 0 {
 		firstBiggest = c.points[0]
@@ -51,7 +51,7 @@ func (c *Continuim) findNearestPoint(point uint32) uint32 {
 	return firstBiggest
 }
 
-func (c *Continuim) findNearestPointBisect(point uint32) uint32 {
+func (c *Continuum) findNearestPointBisect(point uint32) uint32 {
 	//this is a hideous binary search through the array to find the first biggest point
 	jump := len(c.points) / 2
 	var firstBiggest uint32
@@ -95,22 +95,22 @@ func (c *Continuim) findNearestPointBisect(point uint32) uint32 {
 	return firstBiggest
 }
 
-//Make instantiates a Continuim with a set of hosts of equal weights
-func Make(hosts []string) *Continuim {
-	c := &Continuim{}
+//Make instantiates a Continuum with a set of hosts of equal weights
+func Make(hosts []string) *Continuum {
+	c := &Continuum{}
 	c.setHosts(hosts)
 	return c
 }
 
-//MakeWithWeights instantiates a Continuim with a set of hosts, each with an explicit weighting
-func MakeWithWeights(hosts map[string]uint) *Continuim {
-	c := &Continuim{}
+//MakeWithWeights instantiates a Continuum with a set of hosts, each with an explicit weighting
+func MakeWithWeights(hosts map[string]uint) *Continuum {
+	c := &Continuum{}
 	c.setHostsWithWeights(hosts)
 	return c
 }
 
 //setHosts is a convience function when you have hosts with equal weight
-func (c *Continuim) setHosts(hosts []string) {
+func (c *Continuum) setHosts(hosts []string) {
 	var weights = make(map[string]uint)
 	for _, host := range hosts {
 		weights[host] = 1
@@ -118,9 +118,9 @@ func (c *Continuim) setHosts(hosts []string) {
 	c.setHostsWithWeights(weights)
 }
 
-//setHostsWithWeights mirrors the java implementation of ketama and uses each host's relative weight to determine the number of points it occupies across the continuim
+//setHostsWithWeights mirrors the java implementation of ketama and uses each host's relative weight to determine the number of points it occupies across the continuum
 // https://github.com/RJ/ketama/blob/18cf9a7717dad0d8106a5205900a17617043fe2c/java_ketama/SockIOPool.java#L587-L607
-func (c *Continuim) setHostsWithWeights(hostnames map[string]uint) {
+func (c *Continuum) setHostsWithWeights(hostnames map[string]uint) {
 	c.pointsMap = make(map[uint32]*host)
 	var totalWeight uint
 
@@ -154,7 +154,7 @@ func (c *Continuim) setHostsWithWeights(hostnames map[string]uint) {
 	}
 }
 
-func (c Continuim) hash(key string) uint32 {
+func (c Continuum) hash(key string) uint32 {
 	sum := md5.Sum([]byte(key))
 
 	return uint32(sum[3])<<24 |
