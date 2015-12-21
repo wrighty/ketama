@@ -52,47 +52,11 @@ func (c *Continuum) findNearestPoint(point uint32) uint32 {
 }
 
 func (c *Continuum) findNearestPointBisect(point uint32) uint32 {
-	//this is a hideous binary search through the array to find the first biggest point
-	jump := len(c.points) / 2
-	var firstBiggest uint32
-	curPos := jump
-	for {
-		jump = jump / 2
-		if jump == 0 {
-			jump = 1
-		}
-		cmp := c.points[curPos]
-
-		if cmp < point {
-			curPos += jump
-			if curPos >= len(c.points) {
-				firstBiggest = c.points[0]
-				break
-			}
-			continue
-		}
-		if cmp == point {
-			if curPos < (len(c.points) - 1) {
-				firstBiggest = c.points[curPos+1]
-				break
-			}
-			firstBiggest = c.points[0]
-			break
-		}
-		if cmp > point {
-			if curPos == 0 {
-				firstBiggest = c.points[0]
-				break
-			}
-			if c.points[curPos-1] > point {
-				curPos -= jump
-				continue
-			}
-			firstBiggest = cmp
-			break
-		}
+	nearest := sort.Search(len(c.points), func(i int) bool { return c.points[i] > point })
+	if nearest == len(c.points) {
+		nearest = 0
 	}
-	return firstBiggest
+	return c.points[nearest]
 }
 
 //Make instantiates a Continuum with a set of hosts of equal weights
