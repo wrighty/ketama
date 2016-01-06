@@ -20,7 +20,26 @@ applications. MD5 is used throughout for hashing.
 
 To install:
 
-```go
+```
 go get github.com/wrighty/ketama
+```
+
+To use, all hosts are equally weighted:
+
+```go
+hosts := []string{"host1", "host2"}
+c := ketama.Make(hosts)
+host := c.GetHost('my key')
+```
+
+Or with weighted hosts:
+
+```go
+hosts := map[string]uint{
+    "host1": 79,
+    "host2": 1,
+}
+c := ketama.MakeWithWeights(hosts)
+host := c.GetHost('my key')
 ```
 
