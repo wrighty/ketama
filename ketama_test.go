@@ -9,6 +9,7 @@ import (
 )
 
 func TestSetHost(t *testing.T) {
+	t.Parallel()
 
 	hosts := []string{"host1", "host2"}
 
@@ -31,6 +32,7 @@ func TestSetHost(t *testing.T) {
 }
 
 func TestSetHostWithWeights(t *testing.T) {
+	t.Parallel()
 	hosts := map[string]uint{
 		"host1": 79,
 		"host2": 1,
@@ -43,6 +45,7 @@ func TestSetHostWithWeights(t *testing.T) {
 }
 
 func TestFindMethodsMatch(t *testing.T) {
+	t.Parallel()
 	c := MakeWithWeights(benchmarkHosts)
 
 	for _, key := range benchmarkKeys {
@@ -57,6 +60,7 @@ func TestFindMethodsMatch(t *testing.T) {
 }
 
 func TestEdgeCases(t *testing.T) {
+	t.Parallel()
 	c := MakeWithWeights(benchmarkHosts)
 	tests := []struct {
 		p        uint32
@@ -90,6 +94,7 @@ func TestEdgeCases(t *testing.T) {
 //with other implementations
 //It is a port of https://github.com/RJ/ketama/blob/master/libketama/ketama_test.c
 func TestCompatibilityWithLibketama(t *testing.T) {
+	t.Parallel()
 	var output bytes.Buffer
 
 	//magic value comes from
