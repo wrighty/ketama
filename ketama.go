@@ -2,13 +2,21 @@ package ketama
 
 import (
 	"crypto/md5"
+	"errors"
+	"io/ioutil"
+	"log"
 	"math"
 	"sort"
 	"strconv"
+	"strings"
+	"sync"
 )
 
 //Continuum models a sparse space that a given host occupies one or more points along
 type Continuum struct {
+	filename string
+
+	mu        sync.RWMutex
 	pointsMap map[uint32]*host
 	points    []uint32
 }
@@ -26,12 +34,47 @@ func (a BySize) Less(i, j int) bool { return a[i] < a[j] }
 
 //GetHost looks up the host that is next nearest on the Continuum to where key hashes to and returns the name
 func (c *Continuum) GetHost(key string) string {
-	point := c.hash(key)
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	point := hash(key)
 
 	//nearest := c.findNearestPoint(point)
 	nearest := c.findNearestPointBisect(point)
 	h := c.pointsMap[nearest]
 	return h.name
+}
+
+//Reload implements locking semantics to reload from a file
+func (c *Continuum) Reload() bool {
+	if c.filename == "" {
+		return false
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	bytes, err := ioutil.ReadFile(c.filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	contents := string(bytes)
+	contents = strings.Trim(contents, "\n ")
+	hosts := strings.Split(contents, "\n")
+	if len(hosts) < 1 {
+		log.Fatal("watched file doesn't contain at least one newline")
+	}
+	parts := strings.Split(hosts[0], ",")
+	if len(parts) == 1 {
+		c.setHosts(hosts)
+	} else if len(parts) == 2 {
+		weightedHosts, err := parseHostWeights(hosts)
+		if err != nil {
+			log.Fatal(err)
+		}
+		c.setHostsWithWeights(weightedHosts)
+	} else {
+		log.Fatal("bad format for watched file, neither one nor two TSV fields on the first line")
+	}
+	return true
 }
 
 func (c *Continuum) findNearestPoint(point uint32) uint32 {
@@ -70,6 +113,18 @@ func Make(hosts []string) *Continuum {
 func MakeWithWeights(hosts map[string]uint) *Continuum {
 	c := &Continuum{}
 	c.setHostsWithWeights(hosts)
+	return c
+}
+
+//MakeWithFile instantiates a Continuun from a file that either lists a series of hosts or host, weight pairs. It is suitable to be used with a Watcher
+func MakeWithFile(filename string) *Continuum {
+	c := &Continuum{}
+	c.filename = filename
+	ok := c.Reload()
+	if !ok {
+		return nil
+	}
+
 	return c
 }
 
@@ -118,11 +173,27 @@ func (c *Continuum) setHostsWithWeights(hostnames map[string]uint) {
 	}
 }
 
-func (c Continuum) hash(key string) uint32 {
+func hash(key string) uint32 {
 	sum := md5.Sum([]byte(key))
 
 	return uint32(sum[3])<<24 |
 		uint32(sum[2])<<16 |
 		uint32(sum[1])<<8 |
 		uint32(sum[0])
+}
+
+func parseHostWeights(hosts []string) (map[string]uint, error) {
+	hostWeights := make(map[string]uint)
+	for _, line := range hosts {
+		parts := strings.Split(line, ",")
+		if len(parts) != 2 {
+			return nil, errors.New("bad host file input")
+		}
+		i, err := strconv.Atoi(strings.Trim(parts[1], " "))
+		if err != nil {
+			log.Fatal(err)
+		}
+		hostWeights[parts[0]] = uint(i)
+	}
+	return hostWeights, nil
 }

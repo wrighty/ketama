@@ -49,7 +49,7 @@ func TestFindMethodsMatch(t *testing.T) {
 	c := MakeWithWeights(benchmarkHosts)
 
 	for _, key := range benchmarkKeys {
-		point := c.hash(key)
+		point := hash(key)
 		p1 := c.findNearestPoint(point)
 		p2 := c.findNearestPointBisect(point)
 		if p1 != p2 {
@@ -120,7 +120,7 @@ func TestCompatibilityWithLibketama(t *testing.T) {
 
 	for i := 0; i < 1000000; i++ {
 		k = strconv.Itoa(i)
-		p = c.hash(k)
+		p = hash(k)
 		nearest = c.findNearestPointBisect(p)
 		host = c.pointsMap[nearest].name
 		output.WriteString(fmt.Sprintf("%d %d %s\n", p, nearest, host))
@@ -176,7 +176,7 @@ func BenchmarkBisect(b *testing.B) {
 	c := MakeWithWeights(benchmarkHosts)
 	var benchmarkPoints []uint32
 	for _, k := range benchmarkKeys {
-		benchmarkPoints = append(benchmarkPoints, c.hash(k))
+		benchmarkPoints = append(benchmarkPoints, hash(k))
 	}
 	for i := 0; i < b.N; i++ {
 		for _, point := range benchmarkPoints {
@@ -189,11 +189,69 @@ func BenchmarkWalk(b *testing.B) {
 	c := MakeWithWeights(benchmarkHosts)
 	var benchmarkPoints []uint32
 	for _, k := range benchmarkKeys {
-		benchmarkPoints = append(benchmarkPoints, c.hash(k))
+		benchmarkPoints = append(benchmarkPoints, hash(k))
 	}
 	for i := 0; i < b.N; i++ {
 		for _, point := range benchmarkPoints {
 			c.findNearestPoint(point)
+		}
+	}
+}
+
+func TestWeightedFileParsing(t *testing.T) {
+	t.Parallel()
+	type testCase struct {
+		input       []string
+		expected    map[string]uint
+		expectError bool
+	}
+	cases := []testCase{
+		{
+			[]string{
+				"hostname1, 1",
+				"hostname2, 79",
+			},
+			map[string]uint{
+				"hostname1": 1,
+				"hostname2": 79,
+			},
+			false,
+		},
+		{
+			[]string{
+				"hostname2",
+			},
+			map[string]uint{},
+			true,
+		},
+		{
+			[]string{
+				"hostname2\tfoo\tbar",
+			},
+			map[string]uint{},
+			true,
+		},
+	}
+
+	for _, tc := range cases {
+		actual, err := parseHostWeights(tc.input)
+		if err != nil {
+			if tc.expectError {
+				continue
+			}
+			t.Log(err)
+			t.Fail()
+		}
+		if len(actual) != len(tc.expected) {
+			t.Log("expected:", tc.expected, "actual:", actual)
+			t.Fail()
+		}
+		for k, v := range tc.expected {
+			if v != actual[k] {
+				t.Log("expected:", tc.expected, "actual:", actual)
+				t.Log("expected:", v, "actual:", actual[k], "for", k)
+				t.Fail()
+			}
 		}
 	}
 }
