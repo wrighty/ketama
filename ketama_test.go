@@ -90,6 +90,29 @@ func TestEdgeCases(t *testing.T) {
 
 }
 
+func TestGetHostsWorksWhenAHostIsRemoved(t *testing.T) {
+	hosts := benchmarkHosts
+	c := MakeWithWeights(hosts)
+
+	targets, err := c.GetHosts("key1", 3)
+	if err != nil {
+		t.Log(err)
+		t.Fail()
+	}
+
+	delete(hosts, targets[0])
+	c = MakeWithWeights(hosts)
+
+	remainingTargets, err := c.GetHosts("key1", 2)
+	expected := targets[1:]
+	for i, host := range remainingTargets {
+		if host != expected[i] {
+			t.Logf("%v does not match %v", host, expected[i])
+			t.Fail()
+		}
+	}
+}
+
 //TestCompatibilityWithLibketama recreates the test baked into libketama to ensure this package is compatible
 //with other implementations
 //It is a port of https://github.com/RJ/ketama/blob/master/libketama/ketama_test.c

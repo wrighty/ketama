@@ -3,6 +3,7 @@ package ketama
 import (
 	"crypto/md5"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math"
@@ -96,11 +97,52 @@ func (c *Continuum) findNearestPoint(point uint32) uint32 {
 }
 
 func (c *Continuum) findNearestPointBisect(point uint32) uint32 {
+	nearest := c.findNearestOffsetBisect(point)
+	return c.points[nearest]
+}
+
+func (c *Continuum) findNearestOffsetBisect(point uint32) int {
 	nearest := sort.Search(len(c.points), func(i int) bool { return c.points[i] > point })
 	if nearest == len(c.points) {
 		nearest = 0
 	}
-	return c.points[nearest]
+	return nearest
+}
+
+//GetHosts returns n hosts that are positioned adjecent on the continuum to provide the fundamental building block for replicas. Will return an error if n is larger than the set of known hosts.
+func (c *Continuum) GetHosts(key string, n uint) ([]string, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if n > uint(len(c.hosts)) {
+		err := fmt.Errorf("Can't find %v hosts as requested, only know of %v hosts", n, len(c.hosts))
+		return nil, err
+	}
+	point := hash(key)
+
+	offset := c.findNearestOffsetBisect(point)
+
+	var hosts []string
+	var dupFound bool
+
+	for len(hosts) != int(n) {
+		dupFound = false
+		point := c.points[offset]
+		offset++
+		if offset == len(c.points) {
+			offset = 0
+		}
+		host := c.pointsMap[point]
+		for _, h := range hosts {
+			if h == host.name {
+				dupFound = true
+			}
+		}
+		if dupFound {
+			continue
+		}
+		hosts = append(hosts, host.name)
+	}
+	return hosts, nil
 }
 
 //Make instantiates a Continuum with a set of hosts of equal weights
