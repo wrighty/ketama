@@ -19,6 +19,7 @@ type Continuum struct {
 	mu        sync.RWMutex
 	pointsMap map[uint32]*host
 	points    []uint32
+	hosts     map[string]*host
 }
 
 type host struct {
@@ -141,6 +142,7 @@ func (c *Continuum) setHosts(hosts []string) {
 // https://github.com/RJ/ketama/blob/18cf9a7717dad0d8106a5205900a17617043fe2c/java_ketama/SockIOPool.java#L587-L607
 func (c *Continuum) setHostsWithWeights(hostnames map[string]uint) {
 	c.pointsMap = make(map[uint32]*host)
+	c.hosts = make(map[string]*host)
 	var totalWeight uint
 
 	for _, weight := range hostnames {
@@ -151,6 +153,7 @@ func (c *Continuum) setHostsWithWeights(hostnames map[string]uint) {
 		h := &host{
 			name: hostname,
 		}
+		c.hosts[hostname] = h
 		factor := int(math.Floor((40 * float64(len(hostnames)) * float64(weight)) / float64(totalWeight)))
 		//fmt.Println(factor)
 		for i := 0; i < factor; i++ {
