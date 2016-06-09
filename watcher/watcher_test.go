@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime/debug"
 	"testing"
 	"time"
 )
@@ -57,14 +58,15 @@ func TestWatcher(t *testing.T) {
 	}
 	alterFile()
 
-	//this sleep feels bad, but we need to give fsnotify some time to spot our write
-	time.Sleep(1 * time.Millisecond)
+	waitForWatcher(t, w, func() bool { return r.didReload })
 
 	if !r.didReload {
 		t.Log("Failed to reload", filename)
 		t.Fail()
 	}
 }
+
+type waitFunc func() bool
 
 func TestWatcherWhenFileGoesAway(t *testing.T) {
 	writeOriginalFile()
@@ -76,11 +78,26 @@ func TestWatcherWhenFileGoesAway(t *testing.T) {
 	w := Make(filename, r)
 	deleteFile()
 
-	//this sleep feels bad, but we need to give fsnotify some time to spot our write
-	time.Sleep(1 * time.Millisecond)
+	waitForWatcher(t, w, func() bool { return !w.watching })
 
 	if w.watching {
 		t.Log("file removed, watching should have quit")
 		t.Fail()
+	}
+}
+
+func waitForWatcher(t *testing.T, w *Watcher, f waitFunc) {
+	timeout := time.After(1 * time.Millisecond)
+	for {
+		select {
+		case <-timeout:
+			t.Log(string(debug.Stack()))
+			t.Log("hit timeout, check stack trace above to see more")
+			return
+		default:
+			if f() {
+				return
+			}
+		}
 	}
 }
