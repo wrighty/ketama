@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/wrighty/ketama.svg?branch=master)](https://travis-ci.org/wrighty/ketama)
+[![Code Climate](https://codeclimate.com/github/wrighty/ketama/badges/gpa.svg)](https://codeclimate.com/github/wrighty/ketama)
+
 # ketama
 
 A port of [libketama](https://github.com/RJ/ketama/), written in Go. Provides
