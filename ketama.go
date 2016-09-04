@@ -51,8 +51,6 @@ func (c *Continuum) Reload() bool {
 	if c.filename == "" {
 		return false
 	}
-	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	bytes, err := ioutil.ReadFile(c.filename)
 	if err != nil {
@@ -65,6 +63,10 @@ func (c *Continuum) Reload() bool {
 		log.Fatal("watched file doesn't contain at least one newline")
 	}
 	parts := strings.Split(hosts[0], ",")
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if len(parts) == 1 {
 		c.setHosts(hosts)
 	} else if len(parts) == 2 {
